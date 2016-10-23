@@ -114,6 +114,10 @@ interface BrowserElementCommon {
    Pref="dom.mozbrowser.enabled"]
   boolean getVisible();
 
+  [Throws,
+   Pref="dom.mozbrowser.enabled"]
+  Promise<ImageData> capturePage(DOMRect source);
+
   //[Throws,
   // Pref="dom.mozBrowserFramesEnabled"]
   //void setActive(boolean active);

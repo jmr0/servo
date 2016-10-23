@@ -26,6 +26,7 @@ use dom::bindings::str::DOMString;
 use dom::browsingcontext::BrowsingContext;
 use dom::customevent::CustomEvent;
 use dom::document::Document;
+use dom::domrect::DOMRect;
 use dom::domtokenlist::DOMTokenList;
 use dom::element::{AttributeMutation, Element, RawLayoutElementHelpers};
 use dom::event::Event;
@@ -33,6 +34,7 @@ use dom::eventtarget::EventTarget;
 use dom::globalscope::GlobalScope;
 use dom::htmlelement::HTMLElement;
 use dom::node::{Node, NodeDamage, UnbindContext, document_from_node, window_from_node};
+use dom::promise::Promise;
 use dom::virtualmethods::VirtualMethods;
 use dom::window::{ReflowReason, Window};
 use html5ever_atoms::LocalName;
@@ -51,6 +53,7 @@ use servo_config::prefs::PREFS;
 use servo_config::servo_version;
 use servo_url::ServoUrl;
 use std::cell::Cell;
+use std::rc::Rc;
 use style::attr::{AttrValue, LengthOrPercentageOrAuto};
 use style::context::ReflowGoal;
 use task_source::TaskSource;
@@ -593,6 +596,12 @@ impl HTMLIFrameElementMethods for HTMLIFrameElement {
         }
     }
 
+    #[allow(unrooted_must_root)]
+    fn CapturePage(&self, source: &DOMRect) -> Fallible<Rc<Promise>> {
+        let p = Promise::new(&self.global());
+        p.reject_error(p.global().get_cx(), Error::NotSupported);
+        Ok(p)
+    }
 
     // https://developer.mozilla.org/en-US/docs/Web/API/HTMLIFrameElement/stop
     fn Stop(&self) -> ErrorResult {
