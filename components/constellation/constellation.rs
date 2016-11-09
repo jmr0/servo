@@ -909,6 +909,12 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
                        load_info.new_pipeline_id);
                 self.handle_script_loaded_about_blank_in_iframe_msg(load_info, lc);
             }
+            FromScriptMsg::CapturePage(pipeline_id) => {
+                debug!("constellation got capture page message {:?}",
+                       pipeline_id);
+                //TODO jmr0 finish
+                //self.handle_script_loaded_url_in_iframe_msg(load_info);
+            }
             FromScriptMsg::ChangeRunningAnimationsState(pipeline_id, animation_state) => {
                 self.handle_change_running_animations_state(pipeline_id, animation_state)
             }

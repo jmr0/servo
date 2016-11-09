@@ -13,6 +13,7 @@ use dom::bindings::codegen::Bindings::BrowserElementBinding::BrowserElementOpenW
 use dom::bindings::codegen::Bindings::BrowserElementBinding::BrowserElementSecurityChangeDetail;
 use dom::bindings::codegen::Bindings::BrowserElementBinding::BrowserElementVisibilityChangeEventDetail;
 use dom::bindings::codegen::Bindings::BrowserElementBinding::BrowserShowModalPromptEventDetail;
+use dom::bindings::codegen::Bindings::DOMRectBinding::DOMRectMethods;
 use dom::bindings::codegen::Bindings::HTMLIFrameElementBinding;
 use dom::bindings::codegen::Bindings::HTMLIFrameElementBinding::HTMLIFrameElementMethods;
 use dom::bindings::codegen::Bindings::WindowBinding::WindowBinding::WindowMethods;
@@ -86,6 +87,8 @@ pub struct HTMLIFrameElement {
     sandbox_allowance: Cell<Option<SandboxAllowance>>,
     load_blocker: DOMRefCell<Option<LoadBlocker>>,
     visibility: Cell<bool>,
+    #[ignore_heap_size_of = "Rc"]
+    page_capture_promise: DOMRefCell<Option<(Rc<Promise>, (i32, i32, i32, i32))>>, //TODO jmr0 use more appropriate data struct?
 }
 
 impl HTMLIFrameElement {
@@ -249,6 +252,7 @@ impl HTMLIFrameElement {
             htmlelement: HTMLElement::new_inherited(local_name, prefix, document),
             frame_id: FrameId::new(),
             pipeline_id: Cell::new(None),
+            page_capture_promise: DOMRefCell::new(None),
             sandbox: Default::default(),
             sandbox_allowance: Cell::new(None),
             load_blocker: DOMRefCell::new(None),
@@ -598,9 +602,26 @@ impl HTMLIFrameElementMethods for HTMLIFrameElement {
 
     #[allow(unrooted_must_root)]
     fn CapturePage(&self, source: &DOMRect) -> Fallible<Rc<Promise>> {
-        let p = Promise::new(&self.global());
-        p.reject_error(p.global().get_cx(), Error::NotSupported);
-        Ok(p)
+        if self.Mozbrowser() {
+            if let Some(pipeline_id) = self.pipeline_id.get() {
+                let p = Promise::new(&self.global());
+                *self.page_capture_promise.borrow_mut() = Some((p.clone(),
+                                                                (source.X() as i32, source.Y() as i32, source.Width() as i32, source.Height() as i32),
+                                                                )); //TODO jmr0 would override any in-flight requests
+
+                //p.reject_error(p.global().get_cx(), Error::NotSupported);
+                let window = window_from_node(self);
+                let msg = ConstellationMsg::CapturePage(pipeline_id);
+                window.upcast::<GlobalScope>().constellation_chan().send(msg).unwrap();
+                Ok(p)
+            } else {
+                Err(Error::NotSupported)
+            }
+        } else {
+            debug!("this frame is not mozbrowser: mozbrowser attribute missing, or not a top
+                level window, or mozbrowser preference not set (use --pref dom.mozbrowser.enabled)");
+            Err(Error::NotSupported)
+        }
     }
 
     // https://developer.mozilla.org/en-US/docs/Web/API/HTMLIFrameElement/stop
