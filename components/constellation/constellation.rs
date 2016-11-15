@@ -829,6 +829,10 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
                 debug!("constellation got get-pipeline-title message");
                 self.handle_get_pipeline_title_msg(pipeline_id);
             }
+            FromCompositorMsg::ImageResult(pipeline_id, img) => {
+                debug!("constellation got image result message");
+                self.handle_image_result_msg(pipeline_id, img);
+            }
             FromCompositorMsg::KeyEvent(ch, key, state, modifiers) => {
                 debug!("constellation got key event message");
                 self.handle_key_msg(ch, key, state, modifiers);
@@ -912,8 +916,7 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
             FromScriptMsg::CapturePage(pipeline_id) => {
                 debug!("constellation got capture page message {:?}",
                        pipeline_id);
-                //TODO jmr0 finish
-                //self.handle_script_loaded_url_in_iframe_msg(load_info);
+                self.handle_capture_page_msg(pipeline_id);
             }
             FromScriptMsg::ChangeRunningAnimationsState(pipeline_id, animation_state) => {
                 self.handle_change_running_animations_state(pipeline_id, animation_state)
@@ -1494,6 +1497,13 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
         self.compositor_proxy.send(ToCompositorMsg::SetCursor(cursor))
     }
 
+    fn handle_capture_page_msg(&mut self, pipeline_id: PipelineId) {
+        let parent_pipeline_info = self.pipelines.get(&pipeline_id).and_then(|source| source.parent_info);
+        if let Some((parent_pipeline_id, _)) = parent_pipeline_info {
+            self.compositor_proxy.send(ToCompositorMsg::CaptureScreenPng(parent_pipeline_id));
+        }
+    }
+
     fn handle_change_running_animations_state(&mut self,
                                               pipeline_id: PipelineId,
                                               animation_state: AnimationState) {
@@ -1708,6 +1718,18 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
             length += frame.prev.len();
         }
         let _ = sender.send(length as u32);
+    }
+
+    fn handle_image_result_msg(&mut self, pipeline_id: PipelineId, img: Option<Image>) {
+        let image_result_msg = ConstellationControlMsg::NotifyCaptureScreenResult(pipeline_id, img);
+        let  result = match self.pipelines.get(&pipeline_id) {
+            None => return warn!("Pipeline {:?} closed", pipeline_id),
+            Some(pipeline) => pipeline.script_chan.send(image_result_msg),
+        };
+
+        if let Err(e) = result {
+            self.handle_send_error(pipeline_id, e);
+        }
     }
 
     fn handle_key_msg(&mut self, ch: Option<char>, key: Key, state: KeyState, mods: KeyModifiers) {

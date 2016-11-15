@@ -988,6 +988,8 @@ impl ScriptThread {
                 self.handle_visibility_change_msg(pipeline_id, visible),
             ConstellationControlMsg::NotifyVisibilityChange(parent_pipeline_id, frame_id, visible) =>
                 self.handle_visibility_change_complete_msg(parent_pipeline_id, frame_id, visible),
+            ConstellationControlMsg::NotifyCaptureScreenResult(parent_pipeline_id, pipeline_id, img) =>
+                self.handle_capture_screen_result_msg(parent_pipeline_id, pipeline_id, img),
             ConstellationControlMsg::MozBrowserEvent(parent_pipeline_id,
                                                      frame_id,
                                                      event) =>
@@ -1286,6 +1288,16 @@ impl ScriptThread {
         path_seg.push_str(")");
         reports.extend(get_reports(self.get_cx(), path_seg));
         reports_chan.send(reports);
+    }
+
+    fn handle_capture_screen_result_msg(&self, parent_pipeline_id: PipelineId, id: PipelineId, img: Option<Image>) {
+        if let Some(root_context) = self.browsing_context.get() {
+            if let Some(ref inner_context) = root_context.find(parent_pipeline_id) {
+                if let Some(iframe) = inner_context.active_document().find_iframe(id) {
+                    iframe.set_screen_capture(img);
+                }
+            }
+        }
     }
 
     /// Updates iframe element after a change in visibility

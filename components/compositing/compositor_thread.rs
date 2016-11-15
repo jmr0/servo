@@ -98,6 +98,8 @@ pub enum Msg {
     SetCursor(Cursor),
     /// Composite to a PNG file and return the Image over a passed channel.
     CreatePng(IpcSender<Option<Image>>),
+    /// Composite to a PNG file and return the Image data to the constellation
+    CaptureScreenPng(PipelineId),
     /// Alerts the compositor that the viewport has been constrained in some manner
     ViewportConstrained(PipelineId, ViewportConstraints),
     /// A reply to the compositor asking if the output image is stable.

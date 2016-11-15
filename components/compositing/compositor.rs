@@ -599,6 +599,15 @@ impl<Window: WindowMethods> IOCompositor<Window> {
                 }
             }
 
+            (Msg::CaptureScreenPng(pipeline_id), ShuttingDown::NotShuttingDown) => {
+                let res = sel.composite_specific_target(CompositeTarget::WindowAndPng);
+                let img = res.unwrap_or(None);
+                let msg = ConstellationMsg::ImageResult(pipeline_id, img);
+                if let Err(e) = self.constellation_chan.send(msg) {
+                    warn!("Sending image data to constellation failed ({}).", e);
+                }
+            }
+
             (Msg::ViewportConstrained(pipeline_id, constraints),
              ShutdownState::NotShuttingDown) => {
                 self.constrain_viewport(pipeline_id, constraints);

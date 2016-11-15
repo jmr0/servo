@@ -235,6 +235,8 @@ pub enum ConstellationControlMsg {
     SetDocumentActivity(PipelineId, DocumentActivity),
     /// Notifies script thread whether frame is visible
     ChangeFrameVisibilityStatus(PipelineId, bool),
+    /// Notifes script thread that screen capture result is ready
+    NotifyCaptureScreenResult(PipelineId, PipelineId, Option<Image>),
     /// Notifies script thread that frame visibility change is complete
     /// PipelineId is for the parent, FrameId is for the actual frame.
     NotifyVisibilityChange(PipelineId, FrameId, bool),
@@ -298,6 +300,7 @@ impl fmt::Debug for ConstellationControlMsg {
             SetDocumentActivity(..) => "SetDocumentActivity",
             ChangeFrameVisibilityStatus(..) => "ChangeFrameVisibilityStatus",
             NotifyVisibilityChange(..) => "NotifyVisibilityChange",
+            NotifyCaptureScreenResult(..) => "NotifyCaptureScreenResult",
             Navigate(..) => "Navigate",
             MozBrowserEvent(..) => "MozBrowserEvent",
             UpdatePipelineId(..) => "UpdatePipelineId",
@@ -719,6 +722,8 @@ pub enum ConstellationMsg {
     /// Requests that the constellation inform the compositor of the title of the pipeline
     /// immediately.
     GetPipelineTitle(PipelineId),
+    /// Compositor sends image result to constellation
+    ImageResult(PipelineId, Option<Image>),
     /// Request to load the initial page.
     InitLoadUrl(ServoUrl),
     /// Query the constellation to see if the current compositor output is stable
