@@ -141,6 +141,7 @@ impl Debug for Msg {
             Msg::Exit => write!(f, "Exit"),
             Msg::ShutdownComplete => write!(f, "ShutdownComplete"),
             Msg::ScrollFragmentPoint(..) => write!(f, "ScrollFragmentPoint"),
+            Msg::CaptureScreenPng(..) => write!(f, "CaptureScreenPng"),
             Msg::ChangeRunningAnimationsState(..) => write!(f, "ChangeRunningAnimationsState"),
             Msg::ChangePageTitle(..) => write!(f, "ChangePageTitle"),
             Msg::ChangePageUrl(..) => write!(f, "ChangePageUrl"),

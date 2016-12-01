@@ -82,6 +82,7 @@ use ipc_channel::ipc::{self, IpcSender};
 use ipc_channel::router::ROUTER;
 use layout_traits::LayoutThreadFactory;
 use log::{Log, LogLevel, LogLevelFilter, LogMetadata, LogRecord};
+use msg::constellation_msg::Image;
 use msg::constellation_msg::{FrameId, FrameType, PipelineId};
 use msg::constellation_msg::{Key, KeyModifiers, KeyState};
 use msg::constellation_msg::{PipelineNamespace, PipelineNamespaceId, TraversalDirection};
@@ -1498,10 +1499,11 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
     }
 
     fn handle_capture_page_msg(&mut self, pipeline_id: PipelineId) {
-        let parent_pipeline_info = self.pipelines.get(&pipeline_id).and_then(|source| source.parent_info);
-        if let Some((parent_pipeline_id, _)) = parent_pipeline_info {
-            self.compositor_proxy.send(ToCompositorMsg::CaptureScreenPng(parent_pipeline_id));
-        }
+        //let parent_pipeline_info = self.pipelines.get(&pipeline_id).and_then(|source| source.parent_info);
+        //if let Some((parent_pipeline_id, _)) = parent_pipeline_info {
+        //    self.compositor_proxy.send(ToCompositorMsg::CaptureScreenPng(parent_pipeline_id));
+        //}
+        self.compositor_proxy.send(ToCompositorMsg::CaptureScreenPng(pipeline_id));
     }
 
     fn handle_change_running_animations_state(&mut self,
@@ -1721,15 +1723,20 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
     }
 
     fn handle_image_result_msg(&mut self, pipeline_id: PipelineId, img: Option<Image>) {
-        let image_result_msg = ConstellationControlMsg::NotifyCaptureScreenResult(pipeline_id, img);
-        let  result = match self.pipelines.get(&pipeline_id) {
-            None => return warn!("Pipeline {:?} closed", pipeline_id),
-            Some(pipeline) => pipeline.script_chan.send(image_result_msg),
-        };
+        let parent_pipeline_info = self.pipelines.get(&pipeline_id).and_then(|source| source.parent_info);
+        if let Some((parent_pipeline_id, _)) = parent_pipeline_info {
+            let image_result_msg = ConstellationControlMsg::NotifyCaptureScreenResult(parent_pipeline_id, pipeline_id, img);
 
-        if let Err(e) = result {
-            self.handle_send_error(pipeline_id, e);
+            let result = match self.pipelines.get(&parent_pipeline_id) {
+                None => return warn!("Pipeline {:?} closed", parent_pipeline_id),
+                Some(parent_pipeline) => parent_pipeline.script_chan.send(image_result_msg),
+            };
+
+            if let Err(e) = result {
+                self.handle_send_error(parent_pipeline_id, e);
+            }
         }
+
     }
 
     fn handle_key_msg(&mut self, ch: Option<char>, key: Key, state: KeyState, mods: KeyModifiers) {

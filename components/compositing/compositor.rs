@@ -599,8 +599,8 @@ impl<Window: WindowMethods> IOCompositor<Window> {
                 }
             }
 
-            (Msg::CaptureScreenPng(pipeline_id), ShuttingDown::NotShuttingDown) => {
-                let res = sel.composite_specific_target(CompositeTarget::WindowAndPng);
+            (Msg::CaptureScreenPng(pipeline_id), ShutdownState::NotShuttingDown) => {
+                let res = self.composite_specific_target(CompositeTarget::WindowAndPng);
                 let img = res.unwrap_or(None);
                 let msg = ConstellationMsg::ImageResult(pipeline_id, img);
                 if let Err(e) = self.constellation_chan.send(msg) {

@@ -42,7 +42,7 @@ use html5ever_atoms::LocalName;
 use ipc_channel::ipc;
 use js::jsapi::{JSAutoCompartment, JSContext, MutableHandleValue};
 use js::jsval::{NullValue, UndefinedValue};
-use msg::constellation_msg::{FrameType, FrameId, PipelineId, TraversalDirection};
+use msg::constellation_msg::{FrameType, FrameId, Image, PipelineId, TraversalDirection};
 use net_traits::response::HttpsState;
 use script_layout_interface::message::ReflowQueryType;
 use script_thread::{ScriptThread, Runnable};
@@ -298,7 +298,7 @@ impl HTMLIFrameElement {
         }
     }
 
-    pub fn set_screen_capture_result(&self, img: Option<Image>) {
+    pub fn set_screen_capture(&self, img: Option<Image>) {
         //TODO: jmr0
     }
 
