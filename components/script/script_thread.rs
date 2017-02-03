@@ -70,9 +70,10 @@ use js::rust::Runtime;
 use layout_wrapper::ServoLayoutNode;
 use mem::heap_size_of_self_and_children;
 use microtask::{MicrotaskQueue, Microtask};
-use msg::constellation_msg::{FrameId, FrameType, Image, PipelineId, PipelineNamespace};
+use msg::constellation_msg::{FrameId, FrameType, PipelineId, PipelineNamespace};
 use net_traits::{CoreResourceMsg, FetchMetadata, FetchResponseListener};
 use net_traits::{IpcSend, Metadata, ReferrerPolicy, ResourceThreads};
+use net_traits::image::base::{Image};
 use net_traits::image_cache_thread::{ImageCacheChan, ImageCacheResult, ImageCacheThread};
 use net_traits::request::{CredentialsMode, Destination, RequestInit};
 use net_traits::storage_thread::StorageType;
@@ -988,8 +989,8 @@ impl ScriptThread {
                 self.handle_visibility_change_msg(pipeline_id, visible),
             ConstellationControlMsg::NotifyVisibilityChange(parent_pipeline_id, frame_id, visible) =>
                 self.handle_visibility_change_complete_msg(parent_pipeline_id, frame_id, visible),
-            ConstellationControlMsg::NotifyCaptureScreenResult(parent_pipeline_id, pipeline_id, img) =>
-                self.handle_capture_screen_result_msg(parent_pipeline_id, pipeline_id, img),
+            ConstellationControlMsg::NotifyCaptureScreenResult(parent_pipeline_id, frame_id, img) =>
+                self.handle_capture_screen_result_msg(parent_pipeline_id, frame_id, img),
             ConstellationControlMsg::MozBrowserEvent(parent_pipeline_id,
                                                      frame_id,
                                                      event) =>
@@ -1290,13 +1291,10 @@ impl ScriptThread {
         reports_chan.send(reports);
     }
 
-    fn handle_capture_screen_result_msg(&self, parent_pipeline_id: PipelineId, id: PipelineId, img: Option<Image>) {
-        if let Some(root_context) = self.browsing_context.get() {
-            if let Some(ref inner_context) = root_context.find(parent_pipeline_id) {
-                if let Some(iframe) = inner_context.active_document().find_iframe(id) {
-                    iframe.set_screen_capture(img);
-                }
-            }
+    fn handle_capture_screen_result_msg(&self, parent_pipeline_id: PipelineId, id: FrameId, img: Option<Image>) {
+        let iframe = self.documents.borrow().find_iframe(parent_pipeline_id, id);
+        if let Some(iframe) = iframe {
+            iframe.set_screen_capture(img);
         }
     }
 

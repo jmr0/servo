@@ -82,11 +82,11 @@ use ipc_channel::ipc::{self, IpcSender};
 use ipc_channel::router::ROUTER;
 use layout_traits::LayoutThreadFactory;
 use log::{Log, LogLevel, LogLevelFilter, LogMetadata, LogRecord};
-use msg::constellation_msg::Image;
 use msg::constellation_msg::{FrameId, FrameType, PipelineId};
 use msg::constellation_msg::{Key, KeyModifiers, KeyState};
 use msg::constellation_msg::{PipelineNamespace, PipelineNamespaceId, TraversalDirection};
 use net_traits::{self, IpcSend, ResourceThreads};
+use net_traits::image::base::{Image};
 use net_traits::image_cache_thread::ImageCacheThread;
 use net_traits::pub_domains::reg_host;
 use net_traits::storage_thread::{StorageThreadMsg, StorageType};
@@ -1723,13 +1723,17 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
     }
 
     fn handle_image_result_msg(&mut self, pipeline_id: PipelineId, img: Option<Image>) {
-        let parent_pipeline_info = self.pipelines.get(&pipeline_id).and_then(|source| source.parent_info);
+        let (frame_id, parent_pipeline_info) = match self.pipelines.get(&pipeline_id) {
+            None => return warn!("Image result for closed pipeline {:?}.", pipeline_id),
+            Some(pipeline) => (pipeline.frame_id, pipeline.parent_info),
+        };
+
         if let Some((parent_pipeline_id, _)) = parent_pipeline_info {
-            let image_result_msg = ConstellationControlMsg::NotifyCaptureScreenResult(parent_pipeline_id, pipeline_id, img);
+            let image_result_msg = ConstellationControlMsg::NotifyCaptureScreenResult(parent_pipeline_id, frame_id, img);
 
             let result = match self.pipelines.get(&parent_pipeline_id) {
                 None => return warn!("Pipeline {:?} closed", parent_pipeline_id),
-                Some(parent_pipeline) => parent_pipeline.script_chan.send(image_result_msg),
+                Some(parent_pipeline) => parent_pipeline.event_loop.send(image_result_msg),
             };
 
             if let Err(e) = result {
