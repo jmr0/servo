@@ -39,12 +39,13 @@ use dom::promise::Promise;
 use dom::virtualmethods::VirtualMethods;
 use dom::window::{ReflowReason, Window};
 use html5ever_atoms::LocalName;
+use image::{DynamicImage, ImageFormat, RgbImage};
 use ipc_channel::ipc;
 use js::jsapi::{JSAutoCompartment, JSContext, MutableHandleValue};
 use js::jsval::{NullValue, UndefinedValue};
 use msg::constellation_msg::{FrameType, FrameId, PipelineId, TraversalDirection};
 use net_traits::response::HttpsState;
-use net_traits::image::base::{Image};
+use net_traits::image::base::{Image, PixelFormat};
 use script_layout_interface::message::ReflowQueryType;
 use script_thread::{ScriptThread, Runnable};
 use script_traits::{IFrameLoadInfo, IFrameLoadInfoWithData, LoadData};
@@ -79,6 +80,14 @@ enum ProcessingMode {
     NotFirstTime,
 }
 
+#[derive(Copy, Clone, JSTraceable, HeapSizeOf)]
+struct ScreenCaptureMetadata {
+    x: u32,
+    y: u32,
+    height: u32,
+    width: u32,
+}
+
 #[dom_struct]
 pub struct HTMLIFrameElement {
     htmlelement: HTMLElement,
@@ -89,7 +98,7 @@ pub struct HTMLIFrameElement {
     load_blocker: DOMRefCell<Option<LoadBlocker>>,
     visibility: Cell<bool>,
     #[ignore_heap_size_of = "Rc"]
-    page_capture_promise: DOMRefCell<Option<(Rc<Promise>, (i32, i32, i32, i32))>>, //TODO jmr0 use more appropriate data struct?
+    page_capture_request: DOMRefCell<Option<(Rc<Promise>, ScreenCaptureMetadata)>>, //TODO jmr0 use more appropriate data struct?
 }
 
 impl HTMLIFrameElement {
@@ -253,7 +262,7 @@ impl HTMLIFrameElement {
             htmlelement: HTMLElement::new_inherited(local_name, prefix, document),
             frame_id: FrameId::new(),
             pipeline_id: Cell::new(None),
-            page_capture_promise: DOMRefCell::new(None),
+            page_capture_request: DOMRefCell::new(None),
             sandbox: Default::default(),
             sandbox_allowance: Cell::new(None),
             load_blocker: DOMRefCell::new(None),
@@ -299,8 +308,54 @@ impl HTMLIFrameElement {
         }
     }
 
+    fn crop_screen_capture(img_data: Vec<u8>,
+                           img_size: (u32, u32),
+                           dest: ScreenCaptureMetadata,
+                           ) -> Vec<u8> {
+
+        let (width, height) = img_size;
+        let stride = width * 4; //4 bytes per RGBA pixel
+        let image_bytes = width * height * 4;
+        let crop_area_bytes = dest.height * dest.width;
+        if image_bytes <=  crop_area_bytes {
+            return img_data;
+        }
+
+        let mut cropped_img = Vec::new();
+        let mut src = (dest.y * stride * dest.x * 4) as usize;
+        for _ in 0..dest.height {
+            let row = &img_data[src..src + (4 * dest.width) as usize];
+            cropped_img.extend_from_slice(row);
+            src += stride as usize;
+        }
+
+        cropped_img
+
+    }
+
     pub fn set_screen_capture(&self, img: Option<Image>) {
-        //TODO: jmr0
+        let request = self.page_capture_request.borrow();
+
+        let (promise, meta) = match *request {
+            Some((ref p, meta)) => (p, meta),
+            None => panic!("No promise object found to fulfill screen capture results, this is a bug"),
+        };
+        let cx = promise.global().get_cx();
+
+        assert!(img.is_some(), "Compositor should always return an image");
+        let img = img.unwrap();
+
+        assert!(img.format == PixelFormat::RGB8, "Unexpected screenshot pixel format");
+
+        let rgb = RgbImage::from_raw(img.width, img.height, img.bytes.to_vec()).unwrap();
+
+        //ImageData expects rgba8
+        let rgba = DynamicImage::ImageRgb8(rgb).to_rgba();
+        let (width, height) = rgba.dimensions();
+
+        //TODO jmr0 finish this
+
+        //promise.resolve_native(cx, &DOMString::from("yup")),
     }
 
     /// https://html.spec.whatwg.org/multipage/#iframe-load-event-steps steps 1-4
@@ -610,8 +665,13 @@ impl HTMLIFrameElementMethods for HTMLIFrameElement {
         if self.Mozbrowser() {
             if let Some(pipeline_id) = self.pipeline_id.get() {
                 let p = Promise::new(&self.global());
-                *self.page_capture_promise.borrow_mut() = Some((p.clone(),
-                                                                (source.X() as i32, source.Y() as i32, source.Width() as i32, source.Height() as i32),
+                *self.page_capture_request.borrow_mut() = Some((p.clone(),
+                                                                ScreenCaptureMetadata{
+                                                                    x: source.X() as u32,
+                                                                    y: source.Y() as u32,
+                                                                    height: source.Height() as u32,
+                                                                    width: source.Width() as u32,
+                                                                }
                                                                 )); //TODO jmr0 would override any in-flight requests
 
                 //p.reject_error(p.global().get_cx(), Error::NotSupported);

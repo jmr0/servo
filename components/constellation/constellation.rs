@@ -1499,10 +1499,6 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
     }
 
     fn handle_capture_page_msg(&mut self, pipeline_id: PipelineId) {
-        //let parent_pipeline_info = self.pipelines.get(&pipeline_id).and_then(|source| source.parent_info);
-        //if let Some((parent_pipeline_id, _)) = parent_pipeline_info {
-        //    self.compositor_proxy.send(ToCompositorMsg::CaptureScreenPng(parent_pipeline_id));
-        //}
         self.compositor_proxy.send(ToCompositorMsg::CaptureScreenPng(pipeline_id));
     }
 
