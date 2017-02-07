@@ -58,6 +58,7 @@ use servo_config::servo_version;
 use servo_url::ServoUrl;
 use std::cell::Cell;
 use std::rc::Rc;
+use std::thread;
 use style::attr::{AttrValue, LengthOrPercentageOrAuto};
 use style::context::ReflowGoal;
 use task_source::TaskSource;

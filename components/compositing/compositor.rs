@@ -601,6 +601,10 @@ impl<Window: WindowMethods> IOCompositor<Window> {
 
             (Msg::CaptureScreenPng(pipeline_id), ShutdownState::NotShuttingDown) => {
                 let res = self.composite_specific_target(CompositeTarget::WindowAndPng);
+                if let Err(ref e) = res {
+                    info!("Error retrieving PNG: {:?}", e);
+                    println!("jmr0 failed to composite {:?}", e);
+                }
                 let img = res.unwrap_or(None);
                 let msg = ConstellationMsg::ImageResult(pipeline_id, img);
                 if let Err(e) = self.constellation_chan.send(msg) {

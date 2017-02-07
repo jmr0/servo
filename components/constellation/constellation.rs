@@ -1725,7 +1725,7 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
         };
 
         if let Some((parent_pipeline_id, _)) = parent_pipeline_info {
-            let image_result_msg = ConstellationControlMsg::NotifyCaptureScreenResult(parent_pipeline_id, frame_id, img);
+            let image_result_msg = ConstellationControlMsg::NotifyCaptureScreenResult(parent_pipeline_id, frame_id, pipeline_id, img);
 
             let result = match self.pipelines.get(&parent_pipeline_id) {
                 None => return warn!("Pipeline {:?} closed", parent_pipeline_id),

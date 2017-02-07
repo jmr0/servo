@@ -236,7 +236,7 @@ pub enum ConstellationControlMsg {
     /// Notifies script thread whether frame is visible
     ChangeFrameVisibilityStatus(PipelineId, bool),
     /// Notifes script thread that screen capture result is ready
-    NotifyCaptureScreenResult(PipelineId, FrameId, Option<Image>),
+    NotifyCaptureScreenResult(PipelineId, FrameId, PipelineId, Option<Image>),
     /// Notifies script thread that frame visibility change is complete
     /// PipelineId is for the parent, FrameId is for the actual frame.
     NotifyVisibilityChange(PipelineId, FrameId, bool),

@@ -8690,6 +8690,12 @@
             "url": "/_mozilla/mozilla/mozbrowser/crossorigin_xhr.html"
           }
         ],
+        "mozilla/mozbrowser/iframe_capture_page.html": [
+          {
+            "path": "mozilla/mozbrowser/iframe_capture_page.html",
+            "url": "/_mozilla/mozilla/mozbrowser/iframe_capture_page.html"
+          }
+        ],
         "mozilla/mozbrowser/iframe_goback.html": [
           {
             "path": "mozilla/mozbrowser/iframe_goback.html",

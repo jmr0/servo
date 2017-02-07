@@ -109,6 +109,7 @@ use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Select, Sender, channel};
 use std::thread;
+use std::time::Duration;
 use style::context::ReflowGoal;
 use style::dom::{TNode, UnsafeNode};
 use style::thread_state;
@@ -989,8 +990,8 @@ impl ScriptThread {
                 self.handle_visibility_change_msg(pipeline_id, visible),
             ConstellationControlMsg::NotifyVisibilityChange(parent_pipeline_id, frame_id, visible) =>
                 self.handle_visibility_change_complete_msg(parent_pipeline_id, frame_id, visible),
-            ConstellationControlMsg::NotifyCaptureScreenResult(parent_pipeline_id, frame_id, img) =>
-                self.handle_capture_screen_result_msg(parent_pipeline_id, frame_id, img),
+            ConstellationControlMsg::NotifyCaptureScreenResult(parent_pipeline_id, frame_id, pipeline_id, img) =>
+                self.handle_capture_screen_result_msg(parent_pipeline_id, frame_id, pipeline_id, img),
             ConstellationControlMsg::MozBrowserEvent(parent_pipeline_id,
                                                      frame_id,
                                                      event) =>
@@ -1291,10 +1292,16 @@ impl ScriptThread {
         reports_chan.send(reports);
     }
 
-    fn handle_capture_screen_result_msg(&self, parent_pipeline_id: PipelineId, id: FrameId, img: Option<Image>) {
+    fn handle_capture_screen_result_msg(&self, parent_pipeline_id: PipelineId, id: FrameId, pipeline_id: PipelineId, img: Option<Image>) {
         let iframe = self.documents.borrow().find_iframe(parent_pipeline_id, id);
+        //TODO jmr0 potentially goes on forever, probably not a good idea
         if let Some(iframe) = iframe {
-            iframe.set_screen_capture(img);
+            if let Some(img_data) = img {
+                iframe.set_screen_capture(Some(img_data));
+            } else {
+                thread::sleep(Duration::from_millis(1000));
+                self.constellation_chan.send(ConstellationMsg::CapturePage(pipeline_id)).unwrap();
+            }
         }
     }
 

@@ -1,0 +1,45 @@
+<!doctype html>
+<meta charset="utf-8">
+<head>
+<title>Iframe screen capture tests</title>
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+</head>
+
+<body>
+	<script>
+		async_test(function(t) {
+
+			/*
+			var c = document.getElementById("test_canvas");
+			var ctx = c.getContext("2d");
+			ctx.fillStyle = "blue";
+			ctx.fillRect(40, 40, 30, 30);
+			*/
+
+			var iframe = document.createElement("iframe");
+			iframe.mozbrowser = true;
+			iframe.src = "screen_capture_helper.html";
+
+			var rect = new DOMRect(0, 0, 20, 20);
+
+			iframe.onload = t.step_func(function() {
+				window.setTimeout(t.step_func(function() {
+				
+					var p = iframe.capturePage(rect);
+					p.then(function(val){
+						ctx.putImageData(val, 0, 0);
+					})
+					.catch(function(reason){
+						console.log("failed here");
+					});
+				
+				}), 5000);
+
+			});
+
+			document.body.appendChild(iframe);
+
+		}, "Iframe screen capture test");
+	</script>
+</body>
