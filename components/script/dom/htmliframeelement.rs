@@ -34,6 +34,7 @@ use dom::event::Event;
 use dom::eventtarget::EventTarget;
 use dom::globalscope::GlobalScope;
 use dom::htmlelement::HTMLElement;
+use dom::imagedata::ImageData;
 use dom::node::{Node, NodeDamage, UnbindContext, document_from_node, window_from_node};
 use dom::promise::Promise;
 use dom::virtualmethods::VirtualMethods;
@@ -340,7 +341,6 @@ impl HTMLIFrameElement {
             Some((ref p, meta)) => (p, meta),
             None => panic!("No promise object found to fulfill screen capture results, this is a bug"),
         };
-        let cx = promise.global().get_cx();
 
         assert!(img.is_some(), "Compositor should always return an image");
         let img = img.unwrap();
@@ -353,9 +353,12 @@ impl HTMLIFrameElement {
         let rgba = DynamicImage::ImageRgb8(rgb).to_rgba();
         let (width, height) = rgba.dimensions();
 
-        //TODO jmr0 finish this
+        //TODO jmr0 call crop
+        //TODO jmr0 call project
+        let img_data = ImageData::new(&self.global(), width, height, Some(rgba.into_raw()));
 
-        //promise.resolve_native(cx, &DOMString::from("yup")),
+        let cx = promise.global().get_cx();
+        promise.resolve_native(cx, &img_data);
     }
 
     /// https://html.spec.whatwg.org/multipage/#iframe-load-event-steps steps 1-4
